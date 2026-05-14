@@ -1,0 +1,14 @@
+{
+  "name": "PhysioRef",
+  "short_name": "PhysioRef",
+  "description": "Physiotherapy clinical reference — 113 pathologies, fully offline",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#1a2e20",
+  "theme_color": "#1a2e20",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,69 @@
+{
+  "name": "physioref",
+  "version": "1.0.0",
+  "description": "Clinical reference database for physiotherapy students — fully offline",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac",
+    "build:dmg": "electron-builder --mac dmg",
+    "ios": "npx cap sync ios && npx cap open ios",
+    "ios:sync": "npx cap sync ios"
+  },
+  "build": {
+    "appId": "com.physioref.app",
+    "productName": "PhysioRef",
+    "mac": {
+      "category": "public.app-category.medical",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "title": "PhysioRef",
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "files": [
+      "main.js",
+      "src/**/*",
+      "assets/**/*"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "asar": true
+  },
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.9.1"
+  },
+  "keywords": [
+    "physiotherapy",
+    "clinical",
+    "reference",
+    "offline"
+  ],
+  "author": "PhysioRef",
+  "license": "MIT",
+  "dependencies": {
+    "@capacitor/cli": "^8.3.4",
+    "@capacitor/core": "^8.3.4",
+    "@capacitor/ios": "^8.3.4"
+  }
+}

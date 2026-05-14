@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>PhysioRef</title>
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1a2e20">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="PhysioRef">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <style>
+    /* ---------- FONTS ---------- */
+    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap');
+
+    /* ---------- RESET & BASE ---------- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: 'DM Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px;
+      color: #1a1a1a;
+      background: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ---------- TITLEBAR ---------- */
+    #titlebar {
+      height: 38px;
+      background: #142318;
+      -webkit-app-region: drag;
+      display: flex;
+      align-items: center;
+      padding: 0 80px 0 16px;
+      flex-shrink: 0;
+      user-select: none;
+    }
+    #titlebar span {
+      color: rgba(255,255,255,0.6);
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    /* ---------- MAIN LAYOUT ---------- */
+    #app {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* ---------- SIDEBAR ---------- */
+    #sidebar {
+      width: 280px;
+      min-width: 240px;
+      max-width: 340px;
+      background: #1a2e20;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    #sidebar-header {
+      padding: 18px 16px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      flex-shrink: 0;
+    }
+    #sidebar-header h1 {
+      font-family: 'DM Serif Display', Georgia, 'Times New Roman', serif;
+      font-size: 22px;
+      font-weight: 400;
+      color: #fff;
+      letter-spacing: 0.3px;
+      margin-bottom: 2px;
+    }
+    #sidebar-header p {
+      font-size: 11px;
+      color: rgba(255,255,255,0.45);
+      font-weight: 400;
+      letter-spacing: 0.2px;
+    }
+
+    #search-wrap {
+      padding: 10px 12px 8px;
+      flex-shrink: 0;
+    }
+    #search-input {
+      width: 100%;
+      padding: 8px 12px 8px 34px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      color: #fff;
+      font-family: inherit;
+      font-size: 13px;
+      outline: none;
+      transition: background 0.15s, border-color 0.15s;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.4)' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: 10px center;
+    }
+    #search-input::placeholder { color: rgba(255,255,255,0.35); }
+    #search-input:focus {
+      background-color: rgba(255,255,255,0.12);
+      border-color: rgba(255,255,255,0.25);
+    }
+
+    #filter-pills {
+      display: flex;
+      gap: 5px;
+      padding: 0 12px 10px;
+      flex-shrink: 0;
+    }
+    .filter-pill {
+      padding: 4px 11px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid rgba(255,255,255,0.2);
+      color: rgba(255,255,255,0.65);
+      background: transparent;
+      transition: all 0.15s;
+      letter-spacing: 0.3px;
+      -webkit-app-region: no-drag;
+    }
+    .filter-pill:hover { border-color: rgba(255,255,255,0.4); color: #fff; }
+    .filter-pill.active { background: rgba(255,255,255,0.15); border-color: rgba(255,255,255,0.4); color: #fff; }
+    .filter-pill[data-cat="MSK"].active { background: rgba(74,222,128,0.2); border-color: #4ade80; color: #4ade80; }
+    .filter-pill[data-cat="CVR"].active { background: rgba(248,113,113,0.2); border-color: #f87171; color: #f87171; }
+    .filter-pill[data-cat="NEURO"].active { background: rgba(167,139,250,0.2); border-color: #a78bfa; color: #a78bfa; }
+
+    #pathology-list {
+      flex: 1;
+      overflow-y: auto;
+      padding-bottom: 8px;
+    }
+    #pathology-list::-webkit-scrollbar { width: 4px; }
+    #pathology-list::-webkit-scrollbar-track { background: transparent; }
+    #pathology-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+
+    .group-header {
+      padding: 14px 14px 4px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.3);
+      user-select: none;
+    }
+    .subgroup-header {
+      padding: 8px 14px 3px;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      color: rgba(255,255,255,0.2);
+      user-select: none;
+    }
+
+    .pathology-item {
+      display: flex;
+      align-items: center;
+      padding: 7px 14px 7px 16px;
+      cursor: pointer;
+      border-radius: 0;
+      transition: background 0.1s;
+      position: relative;
+      -webkit-app-region: no-drag;
+    }
+    .pathology-item:hover { background: rgba(255,255,255,0.07); }
+    .pathology-item.active {
+      background: rgba(255,255,255,0.1);
+      border-left: 3px solid #4ade80;
+      padding-left: 13px;
+    }
+    .pathology-item.active .item-name { color: #fff; font-weight: 500; }
+    .item-name {
+      font-size: 13px;
+      color: rgba(255,255,255,0.8);
+      line-height: 1.3;
+      flex: 1;
+    }
+    .item-badge {
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      flex-shrink: 0;
+    }
+    .badge-MSK { background: rgba(74,222,128,0.18); color: #4ade80; }
+    .badge-CVR { background: rgba(248,113,113,0.18); color: #f87171; }
+    .badge-NEURO { background: rgba(167,139,250,0.18); color: #a78bfa; }
+
+    #sidebar-footer {
+      padding: 10px 14px;
+      border-top: 1px solid rgba(255,255,255,0.08);
+      font-size: 11px;
+      color: rgba(255,255,255,0.3);
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    #sidebar-footer .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: #4ade80;
+      margin-right: 6px;
+      display: inline-block;
+    }
+
+    /* ---------- MAIN CONTENT ---------- */
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      background: #f9fafb;
+    }
+
+    #welcome-screen {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #9ca3af;
+      text-align: center;
+      padding: 40px;
+    }
+    #welcome-screen .welcome-icon {
+      width: 64px; height: 64px;
+      background: #e5e7eb;
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 20px;
+      font-size: 28px;
+    }
+    #welcome-screen h2 {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 26px;
+      font-weight: 400;
+      color: #374151;
+      margin-bottom: 8px;
+    }
+    #welcome-screen p { font-size: 14px; color: #9ca3af; max-width: 360px; line-height: 1.6; }
+
+    #content-panel {
+      flex: 1;
+      overflow-y: auto;
+      display: none;
+      flex-direction: column;
+    }
+    #content-panel::-webkit-scrollbar { width: 6px; }
+    #content-panel::-webkit-scrollbar-track { background: #f1f5f9; }
+    #content-panel::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
+
+    /* ---------- PATHOLOGY HEADER ---------- */
+    #pathology-header {
+      padding: 24px 32px 18px;
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      flex-shrink: 0;
+    }
+    #pathology-header .header-top {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    #pathology-title {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 28px;
+      font-weight: 400;
+      color: #111827;
+      line-height: 1.2;
+      flex: 1;
+    }
+    .header-badge {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      padding: 4px 10px;
+      border-radius: 6px;
+      margin-top: 5px;
+      flex-shrink: 0;
+    }
+    .header-badge-MSK { background: #dcfce7; color: #166534; }
+    .header-badge-CVR { background: #fee2e2; color: #991b1b; }
+    .header-badge-NEURO { background: #ede9fe; color: #5b21b6; }
+
+    #pathology-meta {
+      font-size: 12px;
+      color: #6b7280;
+      font-weight: 400;
+    }
+    #pathology-meta span {
+      display: inline-block;
+      background: #f3f4f6;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-right: 4px;
+    }
+
+    /* ---------- SECTIONS ---------- */
+    #sections-container {
+      padding: 20px 32px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .section-card {
+      background: #fff;
+      border-radius: 10px;
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+      transition: box-shadow 0.15s;
+    }
+    .section-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      padding: 12px 16px;
+      background: #f9fafb;
+      border-bottom: 1px solid #e5e7eb;
+      cursor: pointer;
+      user-select: none;
+      gap: 10px;
+    }
+    .section-card.open .section-header { background: #f3f4f6; }
+    .section-header h3 {
+      flex: 1;
+      font-size: 13px;
+      font-weight: 600;
+      color: #374151;
+      letter-spacing: 0.2px;
+    }
+    .section-toggle {
+      width: 18px; height: 18px;
+      display: flex; align-items: center; justify-content: center;
+      color: #9ca3af;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+    .section-card.open .section-toggle { transform: rotate(180deg); }
+    .section-toggle svg { width: 14px; height: 14px; }
+
+    .section-body {
+      padding: 16px 18px;
+      display: none;
+      color: #374151;
+      line-height: 1.65;
+      font-size: 13.5px;
+    }
+    .section-card.open .section-body { display: block; }
+
+    /* ---------- RED FLAGS ---------- */
+    .section-card.red-flag-card {
+      border-color: #fca5a5;
+    }
+    .section-card.red-flag-card .section-header {
+      background: #fef2f2;
+      border-bottom-color: #fca5a5;
+    }
+    .section-card.red-flag-card .section-header h3 {
+      color: #991b1b;
+    }
+    .section-card.red-flag-card.open .section-header { background: #fee2e2; }
+    .section-card.red-flag-card .section-body {
+      background: #fef2f2;
+      border-left: 4px solid #ef4444;
+      color: #7f1d1d;
+    }
+
+    /* ---------- CONTENT TYPOGRAPHY ---------- */
+    .section-body h4 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: #6b7280;
+      margin: 14px 0 6px;
+    }
+    .section-body h4:first-child { margin-top: 0; }
+    .section-body p { margin-bottom: 8px; }
+    .section-body p:last-child { margin-bottom: 0; }
+    .section-body ul, .section-body ol {
+      padding-left: 18px;
+      margin-bottom: 8px;
+    }
+    .section-body li { margin-bottom: 3px; }
+    .section-body strong { font-weight: 600; color: #1f2937; }
+    .section-body em { font-style: italic; color: #4b5563; }
+    .section-body .tag {
+      display: inline-block;
+      background: #f0fdf4;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+      border-radius: 4px;
+      padding: 1px 7px;
+      font-size: 12px;
+      font-weight: 500;
+      margin: 1px 2px;
+    }
+    .section-body .tag-red {
+      background: #fef2f2; color: #991b1b; border-color: #fecaca;
+    }
+    .section-body .tag-purple {
+      background: #f5f3ff; color: #5b21b6; border-color: #ddd6fe;
+    }
+    .section-body .tag-blue {
+      background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe;
+    }
+    .section-body .tag-orange {
+      background: #fff7ed; color: #9a3412; border-color: #fed7aa;
+    }
+    .section-body .phase-block {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 14px;
+      margin-bottom: 10px;
+    }
+    .section-body .phase-block .phase-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .phase-acute .phase-title { color: #dc2626; }
+    .phase-subacute .phase-title { color: #d97706; }
+    .phase-chronic .phase-title { color: #059669; }
+    .section-body table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12.5px;
+      margin-bottom: 10px;
+    }
+    .section-body table th {
+      background: #f3f4f6;
+      padding: 7px 10px;
+      text-align: left;
+      font-weight: 600;
+      color: #374151;
+      border: 1px solid #e5e7eb;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .section-body table td {
+      padding: 7px 10px;
+      border: 1px solid #e5e7eb;
+      vertical-align: top;
+      color: #374151;
+    }
+    .section-body table tr:nth-child(even) td { background: #f9fafb; }
+
+    /* ---------- NO RESULTS ---------- */
+    #no-results {
+      display: none;
+      padding: 40px;
+      text-align: center;
+      color: rgba(255,255,255,0.4);
+      font-size: 13px;
+    }
+
+    /* ---------- MOBILE BACK BUTTON (hidden on desktop) ---------- */
+    #mobile-back-btn {
+      display: none;
+    }
+
+    /* ---------- MOBILE LAYOUT (iOS / Capacitor) ---------- */
+    @media (max-width: 767px) {
+      html, body { height: 100%; height: 100dvh; overflow: hidden; }
+
+      #titlebar { display: none; }
+
+      #app {
+        position: relative;
+        flex: 1;
+        display: block;
+        overflow: hidden;
+        height: 100%;
+      }
+
+      /* List screen — full-screen, always rendered below */
+      #sidebar {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        min-width: unset;
+        max-width: unset;
+        z-index: 1;
+        padding-top: env(safe-area-inset-top, 0px);
+        transition: transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      }
+      body.content-visible #sidebar {
+        transform: translateX(-30%);
+        pointer-events: none;
+      }
+
+      #sidebar-header { padding-top: 14px; }
+
+      /* Content screen — full-screen, slides in from right */
+      #main {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        z-index: 2;
+        transform: translateX(100%);
+        transition: transform 0.32s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        padding-top: env(safe-area-inset-top, 0px);
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        background: #f9fafb;
+      }
+      body.content-visible #main {
+        transform: translateX(0);
+      }
+
+      /* Welcome screen hidden on mobile — go straight to list */
+      #welcome-screen { display: none !important; }
+
+      /* Content panel fills remaining height and scrolls */
+      #content-panel {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Mobile back button */
+      #mobile-back-btn {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        padding: 10px 16px 6px;
+        background: none;
+        border: none;
+        color: #2563eb;
+        font-size: 16px;
+        font-family: inherit;
+        font-weight: 500;
+        cursor: pointer;
+        flex-shrink: 0;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      /* Pathology header */
+      #pathology-header { padding: 12px 20px 14px; }
+      #pathology-title { font-size: 22px; }
+
+      /* Section controls */
+      #section-controls { padding: 8px 20px 0; }
+
+      /* Sections */
+      #sections-container {
+        padding: 14px 16px calc(32px + env(safe-area-inset-bottom, 0px));
+      }
+
+      /* Touch-friendly list items (min 44px) */
+      .pathology-item {
+        padding: 11px 14px 11px 16px;
+        min-height: 44px;
+      }
+      .item-name { font-size: 14px; }
+
+      /* Filter pills */
+      .filter-pill { padding: 6px 13px; font-size: 12px; }
+
+      /* Prevent iOS zoom on search input focus — must be 16px+ */
+      #search-input { font-size: 16px; padding: 10px 12px 10px 36px; }
+
+      /* Smooth scroll for list */
+      #pathology-list { -webkit-overflow-scrolling: touch; }
+    }
+
+    /* ---------- ADD PATHOLOGY BUTTON ---------- */
+    #add-pathology-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 26px; height: 26px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+      color: rgba(255,255,255,0.8);
+      font-size: 18px; line-height: 1;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+      padding: 0 0 1px 0;
+    }
+    #add-pathology-btn:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.35); color: #fff; }
+
+    /* ---------- CUSTOM BADGE ---------- */
+    .badge-CUSTOM { background: rgba(251,191,36,0.18); color: #fbbf24; }
+    .item-custom-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: #fbbf24; margin-left: 5px; flex-shrink: 0;
+    }
+
+    /* ---------- CUSTOM PATHOLOGY CONTROLS IN HEADER ---------- */
+    .custom-controls {
+      display: flex; gap: 6px; margin-top: 10px;
+    }
+    .btn-edit-custom, .btn-delete-custom {
+      font-size: 11px; font-weight: 600;
+      padding: 4px 10px; border-radius: 6px;
+      cursor: pointer; transition: all 0.12s; border: 1px solid;
+    }
+    .btn-edit-custom { color: #2563eb; border-color: #bfdbfe; background: #eff6ff; }
+    .btn-edit-custom:hover { background: #dbeafe; }
+    .btn-delete-custom { color: #dc2626; border-color: #fecaca; background: #fef2f2; }
+    .btn-delete-custom:hover { background: #fee2e2; }
+    .btn-reset-custom { color: #92400e; border-color: #fde68a; background: #fffbeb; }
+    .btn-reset-custom:hover { background: #fef3c7; }
+    .item-override-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: #60a5fa; margin-left: 5px; flex-shrink: 0;
+    }
+
+    /* ---------- MODAL OVERLAY ---------- */
+    #modal-overlay {
+      display: none;
+      position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.55);
+      align-items: center; justify-content: center;
+      padding: 20px;
+    }
+    #modal-overlay.open { display: flex; }
+
+    #modal {
+      background: #fff;
+      border-radius: 14px;
+      width: 100%; max-width: 560px;
+      max-height: 90vh;
+      display: flex; flex-direction: column;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      overflow: hidden;
+    }
+
+    #modal-header {
+      padding: 18px 20px 16px;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0;
+    }
+    #modal-title {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 20px; font-weight: 400; color: #111827; flex: 1;
+    }
+    #modal-close {
+      width: 28px; height: 28px;
+      border-radius: 7px; border: 1px solid #e5e7eb;
+      background: #f9fafb; color: #6b7280;
+      font-size: 16px; cursor: pointer; display: flex;
+      align-items: center; justify-content: center;
+      transition: background 0.1s;
+    }
+    #modal-close:hover { background: #f3f4f6; color: #374151; }
+
+    #modal-body {
+      flex: 1; overflow-y: auto; padding: 20px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+
+    #modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid #e5e7eb;
+      display: flex; gap: 8px; justify-content: flex-end;
+      flex-shrink: 0;
+    }
+
+    /* ---------- FORM ELEMENTS ---------- */
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-label {
+      font-size: 12px; font-weight: 600; color: #374151;
+      text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .form-input {
+      padding: 9px 12px;
+      border: 1px solid #d1d5db; border-radius: 8px;
+      font-family: inherit; font-size: 14px; color: #111827;
+      background: #fff; outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    .form-input:focus {
+      border-color: #1a2e20;
+      box-shadow: 0 0 0 3px rgba(26,46,32,0.08);
+    }
+    textarea.form-input {
+      resize: vertical; min-height: 80px; line-height: 1.5; font-size: 13px;
+    }
+
+    /* ---------- SECTION EDITOR ---------- */
+    .sections-editor-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .add-section-btn {
+      font-size: 12px; font-weight: 600; color: #1a2e20;
+      background: rgba(26,46,32,0.06); border: 1px solid rgba(26,46,32,0.15);
+      border-radius: 6px; padding: 4px 10px; cursor: pointer;
+      transition: background 0.12s;
+    }
+    .add-section-btn:hover { background: rgba(26,46,32,0.12); }
+
+    .section-row {
+      border: 1px solid #e5e7eb; border-radius: 8px;
+      padding: 12px; margin-bottom: 8px;
+      display: flex; flex-direction: column; gap: 8px;
+      background: #fafafa;
+    }
+    .section-row-top { display: flex; gap: 8px; align-items: center; }
+    .section-row-top .form-input { flex: 1; }
+    .section-redflag-row { display: flex; align-items: center; gap: 6px; }
+    .section-redflag-row label { font-size: 12px; color: #6b7280; cursor: pointer; }
+    .del-section-btn {
+      width: 26px; height: 26px; border-radius: 6px;
+      border: 1px solid #fecaca; background: #fef2f2;
+      color: #dc2626; font-size: 15px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background 0.1s;
+    }
+    .del-section-btn:hover { background: #fee2e2; }
+
+/* ---------- API KEY DIALOG ---------- */
+    #apikey-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(0,0,0,0.55);
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    #apikey-overlay.open { display: flex; }
+    #apikey-dialog {
+      background: #fff; border-radius: 14px; padding: 24px;
+      width: 100%; max-width: 400px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    #apikey-title {
+      font-family: 'DM Serif Display', Georgia, serif;
+      font-size: 18px; color: #111827; margin: 0;
+    }
+    #apikey-desc { font-size: 13px; color: #6b7280; margin: 0; line-height: 1.5; }
+    #apikey-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
+
+    /* ---------- AI GENERATE BUTTON ---------- */
+    .name-input-row { display: flex; gap: 8px; align-items: center; }
+    .name-input-row .form-input { flex: 1; min-width: 0; }
+    .btn-ai-generate {
+      padding: 8px 13px; border-radius: 8px; white-space: nowrap; flex-shrink: 0;
+      border: 1px solid rgba(26,46,32,0.3); background: rgba(26,46,32,0.06);
+      color: #1a2e20; font-size: 12px; font-weight: 600; letter-spacing: 0.2px;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.12s, opacity 0.15s;
+    }
+    .btn-ai-generate:disabled { opacity: 0.35; cursor: not-allowed; }
+    .btn-ai-generate:not(:disabled):not(.loading):hover { background: rgba(26,46,32,0.13); }
+    .btn-ai-generate.loading { opacity: 0.6; cursor: not-allowed; }
+
+    /* ---------- MODAL ACTION BUTTONS ---------- */
+    .btn-cancel {
+      padding: 8px 16px; border-radius: 8px;
+      border: 1px solid #e5e7eb; background: #fff;
+      color: #6b7280; font-size: 13px; font-weight: 500;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.1s;
+    }
+    .btn-cancel:hover { background: #f9fafb; }
+    .btn-save {
+      padding: 8px 20px; border-radius: 8px;
+      border: none; background: #1a2e20;
+      color: #fff; font-size: 13px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      transition: background 0.15s;
+    }
+    .btn-save:hover { background: #253d2c; }
+
+    @media (max-width: 767px) {
+      #modal-overlay { align-items: flex-end; padding: 0; }
+      #modal { border-radius: 16px 16px 0 0; max-height: 92dvh; }
+      .form-row { grid-template-columns: 1fr; }
+    }
+
+    /* ---------- EXPAND/COLLAPSE ALL ---------- */
+    #section-controls {
+      display: flex;
+      gap: 8px;
+      padding: 12px 32px 0;
+    }
+    .ctrl-btn {
+      font-size: 11px;
+      font-weight: 600;
+      color: #6b7280;
+      background: none;
+      border: 1px solid #e5e7eb;
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+    .ctrl-btn:hover { background: #f3f4f6; color: #374151; }
+  </style>
+</head>
+<body>
+  <div id="titlebar">
+    <span>PhysioRef — Clinical Reference Database</span>
+  </div>
+  <div id="app">
+    <!-- SIDEBAR -->
+    <nav id="sidebar">
+      <div id="sidebar-header">
+        <h1>PhysioRef</h1>
+        <p>Physiotherapy Clinical Reference</p>
+      </div>
+
+      <div id="search-wrap">
+        <input type="text" id="search-input" placeholder="Search pathologies…" autocomplete="off" spellcheck="false">
+      </div>
+
+      <div id="filter-pills">
+        <button class="filter-pill active" data-cat="ALL">All</button>
+        <button class="filter-pill" data-cat="MSK">MSK</button>
+        <button class="filter-pill" data-cat="CVR">CVR</button>
+        <button class="filter-pill" data-cat="NEURO">Neuro</button>
+      </div>
+
+      <div id="pathology-list"></div>
+
+      <div id="sidebar-footer">
+        <span><span class="dot"></span><span id="notes-count">0</span> pathologies</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="color:rgba(255,255,255,0.2);font-size:10px;">100% OFFLINE</span>
+          <button id="add-pathology-btn" title="Add custom pathology">+</button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- MAIN CONTENT -->
+    <main id="main">
+      <div id="welcome-screen">
+        <div class="welcome-icon">🩺</div>
+        <h2>Clinical Reference Database</h2>
+        <p>Select a pathology from the sidebar to view full clinical notes, assessment guides, and evidence-based management strategies.</p>
+      </div>
+
+      <div id="content-panel">
+        <button id="mobile-back-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <div id="pathology-header">
+          <div class="header-top">
+            <h2 id="pathology-title"></h2>
+            <span id="header-badge" class="header-badge"></span>
+          </div>
+          <div id="pathology-meta"></div>
+        </div>
+
+        <div id="section-controls">
+          <button class="ctrl-btn" id="expand-all">Expand All</button>
+          <button class="ctrl-btn" id="collapse-all">Collapse All</button>
+        </div>
+
+        <div id="sections-container"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- ADD / EDIT PATHOLOGY MODAL -->
+  <div id="modal-overlay">
+    <div id="modal">
+      <div id="modal-header">
+        <span id="modal-title">Add Pathology</span>
+        <button id="modal-close" aria-label="Close">&#x2715;</button>
+      </div>
+      <div id="modal-body">
+        <input type="hidden" id="form-edit-id">
+
+        <div class="form-group">
+          <label class="form-label" for="form-name">Name</label>
+          <div class="name-input-row">
+            <input type="text" id="form-name" class="form-input" placeholder="e.g. Hamstring Tendinopathy" autocomplete="off" required>
+            <button type="button" id="ai-generate-btn" class="btn-ai-generate" disabled>✦ AI Generate Notes</button>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label" for="form-category">Category</label>
+            <select id="form-category" class="form-input">
+              <option value="MSK">MSK — Musculoskeletal</option>
+              <option value="CVR">CVR — Cardiorespiratory</option>
+              <option value="NEURO">NEURO — Neurology</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="form-subcategory">Subcategory</label>
+            <input type="text" id="form-subcategory" class="form-input" list="subcategory-list" placeholder="e.g. Hip" autocomplete="off" required>
+            <datalist id="subcategory-list"></datalist>
+          </div>
+        </div>
+
+        <div>
+          <div class="sections-editor-header">
+            <span class="form-label" style="margin-bottom:0">Sections</span>
+            <button type="button" id="add-section-btn" class="add-section-btn">+ Add Section</button>
+          </div>
+          <div id="section-inputs"></div>
+        </div>
+      </div>
+      <div id="modal-footer">
+        <button type="button" id="form-cancel" class="btn-cancel">Cancel</button>
+        <button type="button" id="form-save" class="btn-save">Save Pathology</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- API KEY DIALOG -->
+  <div id="apikey-overlay">
+    <div id="apikey-dialog">
+      <p id="apikey-title">Anthropic API Key</p>
+      <p id="apikey-desc">Enter your Anthropic API key to use AI generation. It will be saved locally for future use.</p>
+      <input type="password" id="apikey-input" class="form-input" placeholder="sk-ant-…" autocomplete="off" spellcheck="false">
+      <div id="apikey-footer">
+        <button type="button" id="apikey-cancel" class="btn-cancel">Cancel</button>
+        <button type="button" id="apikey-confirm" class="btn-save">Save &amp; Continue</button>
+      </div>
+    </div>
+  </div>
+
+<script src="data/msk-shoulder.js"></script>
+  <script src="data/msk-elbow.js"></script>
+  <script src="data/msk-wrist.js"></script>
+  <script src="data/msk-cervical.js"></script>
+  <script src="data/msk-lumbar.js"></script>
+  <script src="data/msk-hip.js"></script>
+  <script src="data/msk-knee.js"></script>
+  <script src="data/msk-foot.js"></script>
+  <script src="data/msk-inflammatory.js"></script>
+  <script src="data/cvr-cardiac.js"></script>
+  <script src="data/cvr-respiratory.js"></script>
+  <script src="data/cvr-vascular.js"></script>
+  <script src="data/neuro-cns.js"></script>
+  <script src="data/neuro-pns.js"></script>
+  <script src="data/neuro-vestibular.js"></script>
+  <script src="data/neuro-neuromuscular.js"></script>
+  <script src="renderer.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js', { updateViaCache: 'none' }).catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
