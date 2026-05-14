@@ -1,4 +1,4 @@
-const CACHE = 'physioref-v2';
+const CACHE = 'physioref-v3';
 
 const CORE = [
   './',

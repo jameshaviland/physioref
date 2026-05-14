@@ -520,8 +520,8 @@ category must be one of: MSK, CVR, NEURO. Use **bold**, *italic*, or lines start
       });
       json = await res.json();
     } else {
-      // Browser/mobile — route through local proxy to avoid CORS
-      res = await fetch('/api/generate', {
+      // Browser/mobile — route through cloud proxy to avoid CORS
+      res = await fetch('https://physioref.onrender.com/api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: pathologyName, apiKey })
